@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ namespace WindowsFormsApp1
         public string Mqtt_PORT { get; set; }
         public string Mqtt_Topic { get; set; }
         public string Mqtt_Message { get; set; }
+        public string Mqtt_File { get; set; }
         public bool Mqtt_Retain { get; set; }
         public bool Mqtt_Connected { get; set; }
 
@@ -75,9 +77,7 @@ namespace WindowsFormsApp1
                 Mqtt_Connected =  true;
             }
             else
-            {
-        
-
+            {        
                 try
                 {
                     // Create Client instance
@@ -147,6 +147,54 @@ namespace WindowsFormsApp1
                     MessageBox.Show(ex.Message, "Alert");
                 }
             }
+        }
+
+        private void textBox4_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_File = textBox.Text;
+            }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+
+            try
+            {
+                IList<TopicMessage> topicMessages = new List<TopicMessage>();
+                StreamReader reader = File.OpenText(Mqtt_File);
+            string line;
+            while ((line = reader.ReadLine()) != null)
+                { 
+                var newString = line.Remove(0, line.IndexOf("/ ") + 2);
+
+
+                string[] items = line.Split(' ');
+                    topicMessages.Add(new TopicMessage
+                    {
+                        Topic = items[0],
+                        MQTTMessage = newString
+                    });
+                }
+
+                foreach(TopicMessage top in topicMessages)
+                {
+                    _mqttClient.Publish(top.Topic, Encoding.ASCII.GetBytes(top.MQTTMessage), 0, Mqtt_Retain);
+                }
+                reader.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Alert");
+            }
+        }
+
+        public class TopicMessage
+        {
+            public string Topic { get; set; }
+            public string MQTTMessage { get; set; }
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -21,9 +23,15 @@ namespace WindowsFormsApp1
         public string Mqtt_File { get; set; }
         public bool Mqtt_Retain { get; set; }
         public bool Mqtt_Connected { get; set; }
-
+        public string Mqtt_Command { get; private set; }
+        public string Mqtt_CommandItemName { get; private set; }
+        public string Mqtt_CommandItemValue { get; private set; }
+        public string Mqtt_CommandItem2Name { get; private set; }
+        public string Mqtt_CommandItem2Value { get; private set; }
         private MqttClient _mqttClient;
         string clientId;
+
+
         public Form1()
         {
             InitializeComponent();
@@ -167,8 +175,18 @@ namespace WindowsFormsApp1
                 StreamReader reader = File.OpenText(Mqtt_File);
             string line;
             while ((line = reader.ReadLine()) != null)
-                { 
-                var newString = line.Remove(0, line.IndexOf("/ ") + 2);
+                {
+                    string newString = null;
+                    int indexLine = line.IndexOf("/ ");
+                    if(indexLine > 10)
+                    {                   
+                        newString = line.Remove(0, indexLine + 2);
+                    }
+                    else
+                    {
+                        newString = line.Remove(0, line.IndexOf(" ") + 1);              
+                    }
+         
 
 
                 string[] items = line.Split(' ');
@@ -195,6 +213,101 @@ namespace WindowsFormsApp1
         {
             public string Topic { get; set; }
             public string MQTTMessage { get; set; }
+        }
+
+        private void textBox5_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_Command = textBox.Text;
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                List<CommandItemDTO> commandItems = new List<CommandItemDTO>();
+                commandItems.Add(new CommandItemDTO
+                {
+                    Name = Mqtt_CommandItemName,
+                    Value = Mqtt_CommandItemValue
+                });
+                if(Mqtt_CommandItem2Name !=null)
+                {
+                    commandItems.Add(new CommandItemDTO
+                    {
+                        Name = Mqtt_CommandItem2Name,
+                        Value = Mqtt_CommandItem2Value
+                    });
+                }
+                var stringGuid = Guid.NewGuid().ToString().ToUpper();
+                CommandDTO commandDTO = new CommandDTO
+                {
+                    Command = Mqtt_Command,
+                    CommandId = stringGuid,
+                    CommandItems = commandItems,
+                    ResultTopicMQTT = Mqtt_Topic + stringGuid
+                };
+
+                _mqttClient.Publish(Mqtt_Topic, Encoding.ASCII.GetBytes(JsonConvert.SerializeObject(commandDTO)), 0, false);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Alert");
+            }
+        }
+
+        private void textBox6_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_CommandItemName = textBox.Text;
+            }
+        }
+        private void textBox7_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_CommandItemValue = textBox.Text;
+            }
+        }
+
+        public class CommandItemDTO
+        {
+            public string Name { get; set; }
+            public string Value { get; set; }
+        }
+
+
+        public class CommandDTO
+        {
+            public string Command { get; set; }
+            public string ResultTopicMQTT { get; set; }
+            public DateTime TimeSent { get; set; }
+            public string CommandId { get; set; }
+            public IList<CommandItemDTO> CommandItems { get; set; }
+        }
+
+        private void textBox9_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_CommandItem2Name = textBox.Text;
+            }
+        }
+
+        private void textBox8_TextChanged(object sender, EventArgs e)
+        {
+            TextBox textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                Mqtt_CommandItem2Value = textBox.Text;
+            }
         }
     }
 }
